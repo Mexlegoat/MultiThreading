@@ -6,3 +6,8 @@ Exercice2: Exercice2.o
 
 Exercice2.o: Exercice2.c
 	$(COMP) Exercice2.c
+
+clean:
+	rm -f *.o
+clobber:
+	rm -f Exercice2
