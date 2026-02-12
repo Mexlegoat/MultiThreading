@@ -86,7 +86,7 @@ void* Fct2(void* s) // etape 2
 {
 	trace("Thread master commence");
 	trace("Attente d'un signal..");
-	pthread_cleanup_push(Fct2Fin, (void*) "Thread Master");
+	pthread_cleanup_push(Fct2Fin, (void*) "Thread Master"); // etape 4
 	sigset_t mask;
 	sigfillset(&mask);
 	sigdelset(&mask, SIGINT);
