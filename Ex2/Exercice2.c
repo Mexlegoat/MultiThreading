@@ -49,6 +49,7 @@ int main()
 	sigset_t mask;
 	sigfillset(&mask);
 	pthread_sigmask(SIG_SETMASK, &mask, NULL);
+	// pause // etape 1
 	pthread_join(th1, NULL);
 	pthread_join(th2, NULL);
 	pthread_join(th3, NULL);
