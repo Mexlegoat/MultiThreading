@@ -13,8 +13,6 @@
 void* Fct1(void* arg);
 void* Fct2(void* arg);
 void Fct2Fin(void* arg);
-void* Fct3(void* arg);
-void* Fct4(void* arg);
 void HandlerSIGINT(int sig);
 void HandlerSIGUSR1(int sig);
 typedef struct
