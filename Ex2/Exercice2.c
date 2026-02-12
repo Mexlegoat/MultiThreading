@@ -45,7 +45,7 @@ int main()
 	trace("Creation Thread secondaire 4");
 	pthread_create(&th4, NULL, Fct1, NULL);
 
-	trace("Attente des threads slaves et master");
+	trace("Attente des threads slaves");
 	sigset_t mask;
 	sigfillset(&mask);
 	pthread_sigmask(SIG_SETMASK, &mask, NULL);
