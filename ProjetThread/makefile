@@ -11,7 +11,7 @@ ALL: $(PROGRAMS)
 
 Blockudoku:	Blockudoku.cpp $(OBJS)
 	echo Creation de Blockudoku...
-	$(CC) Blockudoku.cpp -o Blockudoku $(OBJS) -lrt -lpthread -lSDL
+	$(CC) Blockudoku.cpp -o Blockudoku $(OBJS) -lrt -lpthread -lSDL -pthread
 
 $(GRILLESDL)/GrilleSDL.o:	$(GRILLESDL)/GrilleSDL.c $(GRILLESDL)/GrilleSDL.h
 		echo Creation de GrilleSDL.o ...
