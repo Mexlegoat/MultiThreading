@@ -69,6 +69,7 @@ void* threadPiece(void* arg);
 void* threadEvent(void* arg);
 void* threadScore(void* arg);
 void* threadCases(void* arg);
+void* threadNettoyeur(void* arg);
 
 void Attente(int milli);
 void setMessage(const char* texte, bool signalOn);
@@ -89,15 +90,20 @@ CASE casesInserees[NB_CASES];  // cases insérées par le joueur
 int  nbCasesInserees;  // nombre de cases actuellement insérées par le joueur. 
 
 bool MAJScore = false;
+bool MAJCombos = false;
 int score = 0;
+int combos = 0;
 
 int lignesCompletes[NB_CASES];       
-int nbLignesCompletes;    
+int nbLignesCompletes = 0;    
 int colonnesCompletes[NB_CASES];    
-int nbColonnesCompletes;  
-int carresComplets[NB_CASES];    
-int nbCarresComplets;  
-int nbAnalyses;
+int nbColonnesCompletes = 0;  
+int carresComplets[NB_CASES];
+int nbCarresComplets;
+int nbAnalyses = 0;
+
+pthread_t threadFM, threadP, threadEvnt, threadScre, threadNtyr;
+pthread_t tabThreadCase[9][9];
 
 pthread_mutex_t mutexMessage = PTHREAD_MUTEX_INITIALIZER;
 pthread_mutex_t mutexCasesInserees = PTHREAD_MUTEX_INITIALIZER;
@@ -106,6 +112,7 @@ pthread_mutex_t mutexAnalyse = PTHREAD_MUTEX_INITIALIZER;
 
 pthread_cond_t condCasesInserees = PTHREAD_COND_INITIALIZER;
 pthread_cond_t condScore = PTHREAD_COND_INITIALIZER;
+pthread_cond_t condAnalyse = PTHREAD_COND_INITIALIZER;
 
 pthread_key_t cletab;
 ///////////////////////////////////////////////////////////////////////////////////////////////////
@@ -122,8 +129,6 @@ int main(int argc,char* argv[])
   sigfillset(&mask);
   pthread_sigmask(SIG_SETMASK,&mask, NULL);
   EVENT_GRILLE_SDL event;
-  pthread_t threadFM, threadP, threadEvnt, threadScre;
-  pthread_t tabThreadCase[9][9];
   setMessage(" Bienvenue dans Blockudoku ", true);
   tailleMessage = strlen(message);
   srand((unsigned)time(NULL));
@@ -142,6 +147,7 @@ int main(int argc,char* argv[])
   
   pthread_cond_init(&condCasesInserees, NULL);
   pthread_cond_init(&condScore, NULL);
+  pthread_cond_init(&condAnalyse, NULL);
   
   trace("threadDeFileMessage", threadFM);
   pthread_create(&threadFM, NULL, threadDeFileMessage, NULL);
@@ -151,11 +157,13 @@ int main(int argc,char* argv[])
   pthread_create(&threadEvnt, NULL, threadEvent, NULL);
   trace("threadScore", threadScre);
   pthread_create(&threadScre, NULL, threadScore, NULL);
+  trace("threadNettoyeur", threadNtyr);
+  pthread_create(&threadNtyr, NULL, threadNettoyeur, NULL);
 
   pthread_key_create(&cletab, LiberationCle);
   for(int i = 0; i < 9; i++)
   {
-    for(j = 0; j < 9; j++)
+    for(int j = 0; j < 9; j++)
     {
       trace("threadCases", tabThreadCase[i][j]);
       CASE* temp = (CASE*) malloc(sizeof(CASE));
@@ -350,6 +358,7 @@ void* threadPiece(void* arg)
 
           tab[L][C] = BRIQUE;
           DessineBrique(L, C, false);
+          pthread_kill(tabThreadCase[L][C], SIGUSR1);
         }
         score += nbCasesInserees;
         MAJScore = true;
@@ -423,7 +432,7 @@ void* threadScore(void* arg)
   while(1)
   {
     pthread_mutex_lock(&mutexScore);
-    while(!MAJScore)
+    while(!MAJScore && !MAJCombos)
     {
       pthread_cond_wait(&condScore, &mutexScore);
     }
@@ -441,11 +450,103 @@ void* threadScore(void* arg)
 }
 void* threadCases(void* arg)
 {
-  CASE c = (CASE *) arg;
+  sigset_t mask;
+  sigfillset(&mask);
+  sigdelset(&mask, SIGUSR1);
+  pthread_sigmask(SIG_SETMASK, &mask, NULL);
+  CASE* c = (CASE *) arg;
   pthread_setspecific(cletab, c);
   while(1)
   {
     pause();
+  }
+}
+void* threadNettoyeur(void* arg)
+{
+  while(1)
+  {
+    pthread_mutex_lock(&mutexAnalyse);
+    while(nbAnalyses < pieceEnCours.nbCases)
+    {
+      pthread_cond_wait(&condAnalyse, &mutexAnalyse);
+    }
+    if(nbLignesCompletes == 0 && nbCarresComplets == 0 && nbColonnesCompletes == 0)
+    {
+      nbAnalyses = 0;
+    }
+    else
+    {
+      Attente(2000);
+      for(int i = 0; i < nbLignesCompletes; i++)
+      {
+        int L = lignesCompletes[i];
+        for(int C = 0; C < 9; C++)
+        {
+          EffaceCarre(L,C);
+          tab[L][C] = VIDE;
+        }
+        combos++;
+      }
+
+      for(int i = 0; i < nbColonnesCompletes; i++)
+      {
+        int C = colonnesCompletes[i];
+        for(int L = 0; L < 9; L++)
+        {
+          EffaceCarre(L,C);
+          tab[L][C] = VIDE;
+        }
+        combos++;
+      }
+
+      for(int i = 0; i < nbCarresComplets; i++)
+      {
+        int num = carresComplets[i];
+        int L0 = (num / 3) * 3;
+        int C0 = (num % 3) * 3;
+        for (int L = L0; L < L0 + 3; L++)
+        {
+          for(int C = C0; C < C0 + 3; C++)
+          {
+            EffaceCarre(L,C);
+            tab[L][C] = VIDE;
+          }
+        }
+        combos++;
+      }
+      if (combos == 1)
+      {
+        setMessage(" Simple Combo ", true);
+        score += 10;
+        MAJScore = true;
+      }
+      else if (combos == 2)
+      {
+        setMessage(" Double Combo ", true);
+        score += 25;
+        MAJScore = true;
+      }
+      else if (combos == 3)
+      {
+        setMessage(" Triple Combo ", true);
+        score += 40;
+        MAJScore = true;
+      }
+      else if (combos == 4)
+      {
+        setMessage(" Quadruple Combo ", true);
+        score += 55;
+        MAJScore = true;
+      }
+      nbAnalyses = 0;
+      nbLignesCompletes = 0;
+      nbColonnesCompletes = 0;
+      nbCarresComplets = 0;
+      MAJCombos = true;
+      pthread_cond_signal(&condScore);
+      combos = 0;
+    }
+    pthread_mutex_unlock(&mutexAnalyse);
   }
 }
 void Attente(int milli)
@@ -499,11 +600,135 @@ void RotationPiece(PIECE* pPiece)
 
   TriCases(pPiece->cases,0,pPiece->nbCases - 1);
 }
+void LiberationCle(void* p)
+{
+  free(p);
+}
 void HandlerSIGALRM(int sig)
 {
   setMessage(" Jeu en cours ", false);
 }
 void HandlerSIGUSR1(int sig)
 {
+  pthread_mutex_lock(&mutexAnalyse);
+  CASE* c = (CASE*) pthread_getspecific(cletab);
+  bool pleine = false;
+  for (int C = 0; C < 9; C++)
+  {
+    if (tab[c->ligne][C] == BRIQUE)
+    {
+      pleine = true;
+    }
+    else
+    {
+      pleine = false;
+      break;
+    }
+  }
+  bool isTrue = false;
+  for(int i = 0; i < nbLignesCompletes; i++)
+  {
+    if (c->ligne == lignesCompletes[i])
+    {
+      isTrue = true;
+      break;
+    }
+  }
+  if (pleine)
+  {
+    if (!isTrue)
+    {
+      lignesCompletes[nbLignesCompletes] = c->ligne;
+      nbLignesCompletes++;
+    }
+    int L = c->ligne;
+    for(int C = 0; C < 9; C++)
+    {
+      DessineBrique(L, C, true);
+    }
+  }
+  pleine = false;
+  for (int L = 0; L < 9; L++)
+  {
+    if (tab[L][c->colonne] == BRIQUE)
+    {
+      pleine = true;
+    }
+    else
+    {
+      pleine = false;
+      break;
+    }
+  }
 
+  isTrue = false;
+  for(int i = 0; i < nbColonnesCompletes; i++)
+  {
+    if (c->colonne == colonnesCompletes[i])
+    {
+      isTrue = true;
+      break;
+    }
+  }
+
+  if (pleine)
+  {
+    if (!isTrue)
+    {
+      colonnesCompletes[nbColonnesCompletes] = c->colonne;
+      nbColonnesCompletes++;
+    }
+    int C = c->colonne;
+    for(int L = 0; L < 9; L++)
+    {
+      DessineBrique(L, C, true);
+    }
+  }
+
+  int numCarre = (c->ligne/3)*3 + (c->colonne/3);
+
+  int L0 = (c->ligne/3)*3;
+  int C0 = (c->colonne/3)*3;
+
+  bool plein = true;
+
+  for(int i = L0; i < L0+3; i++)
+  {
+    for(int j = C0; j < C0+3; j++)
+    {
+      if(tab[i][j] != BRIQUE)
+      {
+        plein = false;
+        break;
+      }
+    }
+  }
+
+  bool deja = false;
+
+  for(int i = 0; i < nbCarresComplets; i++)
+  {
+    if(carresComplets[i] == numCarre)
+    {
+      deja = true;
+      break;
+    }
+  }
+
+  if(plein && !deja)
+  {
+    carresComplets[nbCarresComplets] = numCarre;
+    nbCarresComplets++;
+
+    for(int i = L0; i < L0+3; i++)
+    {
+      for(int j = C0; j < C0+3; j++)
+      {
+        DessineBrique(i,j,true);
+      }
+    }
+  }
+  nbAnalyses++;
+  pthread_cond_signal(&condAnalyse);
+  pthread_mutex_unlock(&mutexAnalyse);
 }
