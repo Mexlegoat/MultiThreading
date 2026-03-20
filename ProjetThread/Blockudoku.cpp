@@ -123,6 +123,9 @@ pthread_cond_t condAnalyse = PTHREAD_COND_INITIALIZER;
 pthread_cond_t condTraitement = PTHREAD_COND_INITIALIZER;
 
 pthread_key_t cletab;
+
+
+EVENT_GRILLE_SDL event;
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 int main(int argc,char* argv[])
 {
@@ -136,7 +139,6 @@ int main(int argc,char* argv[])
   sigset_t mask;
   sigfillset(&mask);
   pthread_sigmask(SIG_SETMASK,&mask, NULL);
-  EVENT_GRILLE_SDL event;
   setMessage(" Bienvenue dans Blockudoku ", true);
   tailleMessage = strlen(message);
   srand((unsigned)time(NULL));
@@ -199,7 +201,6 @@ int main(int argc,char* argv[])
   bool ok = false;
   while(!ok)
   {
-    event = ReadEvent();
     if (event.type == CROIX) ok = true;
   }
   // Fermeture de la fenetre
@@ -470,7 +471,6 @@ void* threadPiece(void* arg)
 }
 void* threadEvent(void* arg)
 {
-  EVENT_GRILLE_SDL event;
   int ligne, colonne;
   while(1)
   {
