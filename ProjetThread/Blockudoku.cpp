@@ -150,16 +150,6 @@ int main(int argc,char* argv[])
     fflush(stdout);
     exit(1);
   }
-  pthread_mutex_init(&mutexMessage, NULL);
-  pthread_mutex_init(&mutexCasesInserees, NULL);
-  pthread_mutex_init(&mutexScore, NULL);
-  pthread_mutex_init(&mutexAnalyse, NULL);
-  pthread_mutex_init(&mutexTraitement, NULL);
-  
-  pthread_cond_init(&condCasesInserees, NULL);
-  pthread_cond_init(&condScore, NULL);
-  pthread_cond_init(&condAnalyse, NULL);
-  pthread_cond_init(&condTraitement, NULL);
   
   trace("threadDeFileMessage", threadFM);
   pthread_create(&threadFM, NULL, threadDeFileMessage, NULL);
@@ -564,6 +554,7 @@ void* threadScore(void* arg)
     DessineChiffre(8, 17, co4);
     pthread_mutex_unlock(&mutexScore);
     MAJScore = false;
+    MAJCombos = false;
   }
 }
 void* threadCases(void* arg)
@@ -732,7 +723,6 @@ void HandlerSIGALRM(int sig)
 }
 void HandlerSIGUSR1(int sig)
 {
-  pthread_mutex_lock(&mutexAnalyse);
   CASE* c = (CASE*) pthread_getspecific(cletab);
   bool pleine = false;
   for (int C = 0; C < 9; C++)
@@ -756,6 +746,7 @@ void HandlerSIGUSR1(int sig)
       break;
     }
   }
+  pthread_mutex_lock(&mutexAnalyse);
   if (pleine)
   {
     if (!isTrue)
@@ -814,7 +805,7 @@ void HandlerSIGUSR1(int sig)
 
   bool plein = true;
 
-  for(int i = L0; i < L0+3; i++)
+  for(int i = L0; i < L0+3 && plein; i++)
   {
     for(int j = C0; j < C0+3; j++)
     {
