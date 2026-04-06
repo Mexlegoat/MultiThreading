@@ -416,9 +416,9 @@ void* threadPiece(void* arg)
         {
           pthread_mutex_lock(&mutexTraitement);
           traitementEnCours = true;
-          DessineVoyant(8,10,BLEU);
           pthread_mutex_unlock(&mutexTraitement);
 
+          DessineVoyant(8,10,BLEU);
           for (int i = 0; i < nbCasesInserees; i++)
           {
             int L = temp[i].ligne;
@@ -471,14 +471,14 @@ void* threadEvent(void* arg)
       pthread_cancel(threadP);
       pthread_exit(NULL);
     }
-    pthread_mutex_lock(&mutexTraitement);
     if (event.type == CLIC_GAUCHE)
     {
-      pthread_mutex_lock(&mutexCasesInserees);
+      
       if (event.ligne >= 0 && event.ligne < 9 && event.colonne >= 0 && event.colonne < 9)
       {
         if (tab[event.ligne][event.colonne] == VIDE)
         {
+          pthread_mutex_lock(&mutexCasesInserees);
           if(traitementEnCours)
           {
             DessineVoyant(8,10,ROUGE);
@@ -494,6 +494,7 @@ void* threadEvent(void* arg)
             nbCasesInserees++;
             pthread_cond_signal(&condCasesInserees);
           }
+          pthread_mutex_unlock(&mutexCasesInserees);
         }
         if (tab[event.ligne][event.colonne] == BRIQUE ||tab[event.ligne][event.colonne] == DIAMANT)
         {
@@ -514,9 +515,7 @@ void* threadEvent(void* arg)
         else
           DessineVoyant(8,10,VERT);
       }
-      pthread_mutex_unlock(&mutexCasesInserees);
     }
-    pthread_mutex_unlock(&mutexTraitement);
     if (event.type == CLIC_DROIT)
     {
       for (int i = 0; i < nbCasesInserees; i++)
