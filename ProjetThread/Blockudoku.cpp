@@ -518,6 +518,7 @@ void* threadEvent(void* arg)
     }
     if (event.type == CLIC_DROIT)
     {
+      pthread_mutex_lock(&mutexCasesInserees);
       for (int i = 0; i < nbCasesInserees; i++)
       {
         EffaceCarre(casesInserees[i].ligne, casesInserees[i].colonne);
@@ -526,6 +527,7 @@ void* threadEvent(void* arg)
         tab[ligne][colonne] = VIDE;
       }
       nbCasesInserees = 0;
+      pthread_mutex_unlock(&mutexCasesInserees);
 
     }
   }
