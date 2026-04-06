@@ -485,7 +485,7 @@ void* threadEvent(void* arg)
             Attente(400);
             DessineVoyant(8,10,BLEU);
           }
-          else
+          else if (!traitementEnCours)
           {
             DessineDiamant(event.ligne,event.colonne,pieceEnCours.couleur);
             tab[event.ligne][event.colonne] = DIAMANT;
@@ -496,7 +496,7 @@ void* threadEvent(void* arg)
           }
           pthread_mutex_unlock(&mutexCasesInserees);
         }
-        if (tab[event.ligne][event.colonne] == BRIQUE ||tab[event.ligne][event.colonne] == DIAMANT)
+        else if (tab[event.ligne][event.colonne] == BRIQUE ||tab[event.ligne][event.colonne] == DIAMANT)
         {
           DessineVoyant(8,10,ROUGE);
           Attente(400);
