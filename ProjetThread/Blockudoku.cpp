@@ -199,6 +199,7 @@ int main(int argc,char* argv[])
   printf("OK\n");
   tracer("Demande d'annulation du thread de la file de message", threadFM);
   pthread_cancel(threadFM);
+  pthread_key_delete(cletab);
 
   exit(0);
 }
@@ -465,6 +466,11 @@ void* threadEvent(void* arg)
   while(1)
   {
     event = ReadEvent();
+    if (event.type == CROIX)
+    {
+      pthread_cancel(threadP);
+      pthread_exit(NULL);
+    }
     pthread_mutex_lock(&mutexTraitement);
     if (event.type == CLIC_GAUCHE)
     {
